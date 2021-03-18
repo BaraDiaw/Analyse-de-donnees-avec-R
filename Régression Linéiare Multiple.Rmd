@@ -1,0 +1,220 @@
+---
+title: "Régression Linéiare Multiple sur les données de céréales"
+author: "Fatoumata BADJI, Ousmane DIA, Abdoulaye Bara DIAW, Khoudieu GUEYE, Almamy Youssouf LY"
+date: "MSDA-Janvier 2021"
+output:
+  html_document:
+    df_print: paged
+---
+
+### Chargement des données
+```{r}
+# le package here et sa fonction here permettent le charger automatiquemet le chemin d'accés du jeu de données
+#library(here) 
+#library(tidyverse)
+
+cereales = read.csv("E:/MASTER1/Semestre 2/Analyse de données/Projet 1/data/cereales.csv", header = TRUE)
+summary(cereales) #fonction pour produire des résumés sur les objets étudiés par exemple le type de chaque variable
+
+```
+
+### Vérifions la linéarité
+La première chose que nous allons faire est de déterminer s'il y a une relation entre la quantité de fibre et de sucre dans les céréales et leur taux nutritionnel.
+
+```{r}
+library(ggplot2)
+fib=cereales$fiber
+sug=cereales$sugars
+rating=cereales$rating
+
+gg1=ggplot(data=cereales,aes(x=sug,y=fib,col=rating), na.rm = TRUE)+
+  geom_jitter(data=cereales,aes(sug,fib,col=rating), na.rm = TRUE)+
+  labs(x="Sugar",y="Fiber")+
+  geom_smooth(method="lm",se=FALSE,col='black', na.rm = TRUE)+
+  theme_bw()
+  
+gg1
+
+```
+Les niveaux élevés en fibre (en bleu clair) semblent
+être associés avec le taux nutritionnel (rating) élevés et les niveaux élevés de sucre semblent être associés avec le taux nutritionnel faibles (en bleu foncé). 
+Autrement dit nous voyons que les céréales les mieux notées ou qui ont un bon taux nutritionnel(rating) (bleu clair) ont la plus faible teneur en sucre et les plus grandes valeurs en fibre. Pour voir si cette relation est réelle ou significative et si elle tient compte d'une quantité décente de variation des céréales, nous pouvons exécuter un modèle de régression linéaire.
+
+
+
+## 1.Le modèle de régression multiple
+
+
+```{r}
+reg = lm(rating ~ sug + fib)
+summary(reg)
+
+```
+Donc l'équation du modèle linéaire est:
+rating =  47.1195 -1.8725*sugar + 2.7838*fiber
+
+Il semble que le classement des céréales (rating) ait une relation significative avec les fibres dont la  p_value est de 4.10e-08  et la teneur en sucre (faible valeur de p = 6.55e-06). Cette relation est aussi corrélée à cause de la valeur moyenne  de R².
+
+## 2.L’inférence dans la régression multiple
+### Test de student entre le taux nutritonnel (rating) et le sucre (sugar)
+```{r}
+test<-t.test(sug, rating)
+test$p.value # get the p-value
+#test$parameter # get the degrees of freedom
+#test$statistic # get the t test statistics
+```
+Comme la valeur de la p_value est égale à  2.828947e-31 inférieure à n'importe quel seuil raisonnable alors nous pouvons rejeter l'hypothèse nulle. On peut donc dire qu'il ya une preuve d'une relation linéaire entre le taux nutritionnel et le contenu en sucre en la présence de contenu en fibre
+
+### Test de sutdent entre le taux nutritonnel (rating) et le contenu en fibre (fiber)
+```{r}
+test<-t.test(fib, rating)
+test$p.value # get the p-value
+```
+Comme la valeur de la p_value est égale à 4.202751e-34 inférieure à n'importe quel seuil raisonnable de significativité alors nous pouvons donc rejeter l'hypothèse nulle. On peut donc dire qu'il ya une preuve d'une relation linéaire entre le taux nutritionnel et le contenu en fibre en la présence de contenu en sucre
+
+### Test de Fisher 
+```{r}
+anova(reg)
+```
+
+Les valeurs des p_values du taux sucre et du fibre sont inférieures à n'importe quel seuil raisonnable de significativité. Notre conclusion est donc de rejeter l'hypothèse nulle. L'interprétation de cette conclusion est la suivante. Il y a une preuve de la relation linéaire entre le taux nutritionnel et le contenu en sucre et le contenu en fibre.
+
+### L'intervalle  de confiance pour un coefficient particulier
+```{r}
+confint(reg)
+```
+
+D'aprés la question 1, l'équation de notre modèle est définie par: 
+
+rating =  47.1195 -1.8725*sugar + 2.7838*fiber 
+Où  b0 = 47.1195, b1 = -1.8725 et b2 = 2.7838.
+
+L'intervalle de confiance à 95% montre que la valeur pour le coefficient b1 se situe entre -2.482200 et -1.262738. En d'autres termes, pour chaque gramme additionnel de sucre, le taux nutritionnel va décroitre entre 1.262738 et 2.482200 points quand le contenu en fibre est maintenu constant. Par exemple, supposons qu'un chercheur en nutrition ait déclaré que le taux nutritionnel devrait chuter de deux pour chaque gramme additionnel de sucre quand la fibre est maintenue constante. Puisque 2 se situe dans l'intervalle de 95%, nous ne rejetterions pas cette hypothèse, avec 95% de confiance.
+
+L'intervalle de confiance à 95% montre que la valeur pour le coefficient b2 se situe entre 1.641102 et 3.926550. En d'autres termes, pour chaque gramme additionnel de fibre, le taux nutritionnel va croitre entre 1.641102 et 3.926550 points quand le contenu en sucre est maintenu constant.
+
+L'intervalle de confiance à 95% montre que la valeur pour le coefficient b0 se situe entre 42.109250 et 53.529482. En d'autres termes, le taux nutritionnel va croitre entre 42.109250 et 53.529482 points quand le contenu en sucre et en fibre est nul.
+
+
+```{r}
+predict(reg, data.frame(sug = 6.649, fib = 2.113), interval = "confidence")
+```
+L'intervalle de confiance à 95% est: [38.61156, 43.89153]. Nous pouvons être confiant à 95% que la moyenne du taux nutritionnel (rating) de toutes les céréales avec 6.649 grammes de sucre et 2.113 grammes de fibre se situent entre [38.61156, 43.89153]
+
+
+### L'intervalle  de prévison  pour une valeur de y choisie aléatoirement 
+
+```{r}
+predict(reg, data.frame(sug = 6.649, fib = 2.113), interval = "prediction")
+```
+D'aprés le résultat çi-dessus, nous pouvons être confinat à 95% que la valeur prédite du taux nutritionnel (41.25154) pour une céréale choisie au hasard avec 6.649 grammes de sucre et 2.113 grammes de fibre se situe entre 17.93579 et 64.5673.
+
+## 3.	La régression avec des variables prédictives catégoriques
+
+
+Pour une bonne utilisation en régression, nous allons créer trois nouvelles colonnes. Il s'agit des colonnes: shelf_1, shelf_2 et shelf_3. Dans notre cas, La variable catégorique shelf avec ces 3 catégories (0, 1, 2) sera transformé en 2 variables indicatrices (0 et 1) à travers les 3 nouvelles colonnes (shelf1, shelf2 et shelf3).
+Les éléments de la colonne shelf1 auront comme valeur 1 si la céréale est sur le rayon 1 (shelf 1) et O sinon.
+Les éléments de la colonne shelf2 auront comme valeur 1 si la céréale est sur le rayon 2 (shelf 2)  et O sinon.
+Et enfin la dernière colonne shelf3 contiendra que la valeur 0
+
+```{r}
+new_cereales = transform(cereales, shelf1 = ifelse(cereales$shelf == 1, 1, 0), shelf2 = ifelse(cereales$shelf == 2, 1, 0), shelf3 = 0)
+```
+
+
+```{r}
+reg=lm(new_cereales$rating~new_cereales$sugars + new_cereales$fiber + new_cereales$shelf1 + new_cereales$shelf2)
+summary(reg)
+```
+
+Equation de régression:
+rating = 43.7938 -1.9682*sugars +3.3055*fiber +1.887*rayon1 + 2.007*rayon2
+Ainsi l'équation de la régression estimée pour les céréales localisées sur les différentes rayons est donnée par:
+Rayon 1: y1 = 43.7938 -1.9682*sugars +3.3055*fiber              +1.887*rayon1 
+         y1 = 43.7938 -1.9682*sugars +3.3055*fiber
+
+Rayon 2: y2 = 43.7938 -1.9682*sugars +3.3055*fiber               + 2.007*rayon2
+         y2 = 43.7938 -1.9682*sugars +3.3055*fiber
+         
+Rayon 3: y3 = 43.7938 -1.9682*sugars                            +3.3055*fiber
+
+Notons que ces équations estimées sont exactement les mêmes mise à part pour l'intercept y. Cela signifie que les céréales sur chaque rayon sont modélisées en suivant exactement la même courbe dans la dimension sucres (-1.9682) et exactement la même courbe pour la dimension fibre (3.3055). La seule différence vient dans la valeur de l'intercept pour les céréales sur les trois rayons. La catégorie de référence dans ce cas est le rayon 3.
+
+## 4.	La multi-colinéarité
+Les analystes de données ont besoin de garantie contre la multicolinéarité, une condition où certaines des variables prédictives sont corrélées les unes avec les autres. La multicolinéarité conduit à une instabilité dans l'espace des solutions, conduisant à de possibles résultats incohérents. Par exemple, dans un ensemble de données avec une sévère multicolinéarité, il est possible que le test F pour la régression globale soit significatif, alors qu'aucun des tests t pour les variables prédictives ne serait individuellement significatif. La situation serait analogue à apprécier une pizza entiére alors que l'on n'apprécie aucune de ses tranches.
+La forte variabilité associée avec les estimateurs signifie que différents échantillons peuvent produire des estimateurs des coefficients avec des valeurs largement différentes. Par exemple, un échantillon peut produire un estimateur positif du coefficeint pour une variable prédictive alors qu'un second échantillon peut produire un estimateur de coefficient négatif. Cette situation est inacceptable quand la tâche analytique appelle une explication de la relation entre la variable de réponse et les variables prédictives individuellement. Même si une telle instabilité est évitée, l'inclusion de variables qui sont fortement corrélées tend à surestimer un composant particulier du modéle, puisque le composant est essentiellement compté double.
+Pour éviter la multicolinéarité, étudions les coefficients de corrélations entre les varibles prédictives
+
+### Coefficients de corrélations entre les variables prédictives
+```{r}
+mcor = cor(new_cereales[c("fiber","sugars", "potass", "shelf2")], use = "complete.obs")
+mcor
+```
+
+Ce tableau çi-dessus fournit les coefficients de corrélation parmi les variables prédictives pour notre modèle présent. Par exemple le coefficient de corrélation entre sucre et potassium est 0.01067436. Malheureusement, il y'a une paire de variables qui sont fortement corrélées: fibre et potassium, avec r = 0.8737128 . 
+
+### matrices des nuages de points des variables prédictives 
+Une autre méthode pour évaluer si les variables prédictives sont corrélées est de construire une matrice de nuages des points des variables prédictives. 
+```{r}
+library(corrplot)
+corrplot(mcor, type="upper", order="hclust", tl.col="black", tl.srt=45)
+```
+La matrice des nuages des points confirme la découverte que fibre et potassium sont positivement corrélés.
+
+### Etudions la régression 
+Il existe des moyens pour que les résultats de la régression puissent nous prévenir de la présence de multicolinéarité.
+```{r}
+reg=lm(new_cereales$rating~new_cereales$sugars + new_cereales$fiber + new_cereales$shelf2 + new_cereales$potass)
+summary(reg)
+```
+### Facteur d'inflation de la variance(VIF) 
+```{r}
+library(data.table)
+library(carData)
+library(car)
+vif(reg)
+```
+
+La valeur p pour le potassium n'est pas trés faible 0.00174, donc au premier coup d'oeil, la variable peut ou non être incluse dans le modèle. De plus, la valeur p pour la variable indicatrice rayon 2(shelf2): 0.05248 a cru d'une telle proportion que nous devrions peut être pas l'inclure dans le modèle. Cependant, nous ne devrions probablement pas accorder trop de crédit à ces résultats, puisque que les VIF observés semblent indiquer la présence d'un probléme de multicolinéarité. Nous avons besoin de résoudre la multicolinéarité évidente avant d'avancer dans le modèle. Le VIF pour le potassium est 4.876385 et celui de la fibre est  4.908627 qui sont sensiblement égaux à 5 indiquent une forte multicolinéarité. Le probléme est localisé sur ces deux variables puisque les autres VIF sont donnés avec des valeurs acceptables.
+Pour résoudre le probléme de multicolinéarité, nous pouvons procéder à la standarisation des variables.
+
+### Standarisation des variables
+```{r}
+library(clusterSim)
+d = subset(new_cereales, select = c(rating, sugars, fiber, shelf2, potass))
+d$fiber_potass = rowSums(d[,c("fiber", "potass")], na.rm =T)
+
+dn = data.Normalization(d,type="n1",normalization="column")
+```
+### Régression linéaire les variables standarisées
+```{r}
+reg=lm(d$rating~d$sugars + + d$shelf2 + d$fiber_potass)
+summary(reg)
+```
+
+### Facteur d'inflation de la variance (VIF) avec les variables standarisées
+```{r}
+vif(reg)
+```
+
+Nous notons que le probléme de multicolinéarité semble avoir été résolu avec les valeurs de VIF toutes proches de 1. De plus les valeurs de R² et de R² ajusté sont sous-performantes dans les résultats du modèle de régression avec les variables standarisées et les variables fibre et potassium qui sont remplacées par fiber_potass.
+Le probléme surgit du fait que la variable fibre est une trés bonne variable prédictive du taux nutritionnel, particulièrement quand elle est couplée avec le contenu en sucre. Donc utiliser la variable fibre pour former un critére composite avec une variable qui a une corrélation plus faible avec le taux nutritionnel dilue la force de la forte association de fibre avec le taux nutritionnel et dégrade l'efficacité du modèle.
+Nous mettrons donc de côté le modèle
+y = b0 + B1(sucres_noramalisé) + b2(rayon_normalisé) + b(fiber_potass) + epsilon. 
+Une alternative possible est de changer les poids dans le critére composite, pour accroître le poids de la fibre par rapport au potassium.
+L'utilisation de la muticolinéarité doit être strictement limitée pour l'estimation et la prédiction de la variable cible. L'interprétation du modèle ne serait pas correcte, puisque les coefficients individuels n'ont pas de sens en présence de multicolinéarité.
+
+## 5.	Les méthodes de sélection de variables
+### Le test partiel F
+
+On effectue la régression du taux nutritionnel sur chacune des variables explicatives.
+```{r}
+reg= lm(rating ~.-name -mfr-type, data = new_cereales)
+summary(reg)$coef
+
+```
+
+
+
+
+
